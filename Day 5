@@ -1,0 +1,93 @@
+
+----1 Q) write a query to find premium customers from orders data. Premium customers are those who have done more orders than average no of orders per customer----
+
+SELECT * FROM orders;
+
+
+with no_of_orders_per_customer AS (
+SELECT customer_id, count(DISTINCT order_id) as no_of_orders from orders GROUP BY customer_id) 
+SELECT * from 
+no_of_orders_per_customer 
+WHERE no_of_orders> (select avg(no_of_orders) from no_of_orders_per_customer);
+
+
+---2 Q) write a query to find employees whose salary is more than average salary of employees in their department--- 
+
+SELECT * FROM employee;
+
+
+with avg_salary_comparision as ( 
+SELECT
+dept_id, avg(salary) AS avg_salary from employee 
+GROUP BY dept_id)
+SELECT e.emp_name, e.emp_id, e.salary, asce.*   from 
+avg_salary_comparision asce
+INNER JOIN 
+employee e
+ON asce.dept_id = e.dept_id
+WHERE e.salary>=avg_salary;
+
+
+---3 Q) write a query to find employees whose age is more than average age of all the employees---
+
+Select * from employee;
+
+SELECT emp_id, emp_name, emp_age
+FROM employee 
+WHERE emp_age>
+(SELECT AVG(emp_age) as avg_age
+FROM employee);
+
+
+ ---4 Q) write a query to print emp name, salary and dep id of highest salaried employee in each department---
+
+Select * from employee;
+
+SELECT * from employee e
+INNER JOIN 
+(SELECT dept_id, max(salary) as highest_salary
+FROM employee
+GROUP BY 
+dept_id) as hs
+ON e.salary =hs.highest_salary;
+
+
+---5 Q) write a query to print emp name, salary and dep id of highest salaried overall---
+SELECT emp_id, emp_name, dept_id,salary 
+FROM employee e
+INNER JOIN
+(SELECT max(salary) as highest_salary_overall FROM employee) hso
+ON e.salary = hso.highest_salary_overall
+;
+
+
+---6 Q) write a query to print product id and total sales of highest selling products (by no of units sold) in each category ---
+
+SELECT * FROM orders;
+
+WITH 
+total_sales as 
+(
+SELECT category, product_id, sum(sales) as total_sales_product,
+RANK() over(partition by category ORDER BY sum(sales) desc ) as rnk
+FROM orders
+GROUP BY product_id, category
+)
+SELECT * FROM 
+total_sales
+WHERE rnk =1 ;
+
+
+with product_quantity as (
+select category,product_id,sum(quantity) as total_quantity
+from orders 
+group by category,product_id)
+,cat_max_quantity as (
+select category,max(total_quantity) as max_quantity from product_quantity 
+group by category
+)
+select *
+from product_quantity pq
+inner join cat_max_quantity cmq on pq.category=cmq.category
+where pq.total_quantity  = cmq.max_quantity;
+
