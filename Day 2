@@ -1,0 +1,130 @@
+
+----1 Q) write a query to get region wise count of return orders----
+SELECT o.region, count(distinct r.order_id) as count_return_orders
+FROM orders o
+INNER JOIN 
+returns r
+ON o.order_id = r.order_id
+GROUP BY o.region;
+
+
+----2 Q) write a query to get category wise sales of orders that were not returned ----
+
+SELECT o.category, sum(o.sales) categorywise_sales
+FROM orders o
+LEFT JOIN 
+returns r
+ON o.order_id = r.order_id
+WHERE r.order_id IS NULL
+GROUP BY o.category;
+
+
+----3 Q) write a query to print dep name and average salary of employees in that dep----
+
+create table employee(
+    emp_id int,
+    emp_name varchar(20),
+    dept_id int,
+    salary int,
+    manager_id int,
+    emp_age int
+);
+
+
+insert into employee values(1,'Ankit',100,10000,4,39);
+insert into employee values(2,'Mohit',100,15000,5,48);
+insert into employee values(3,'Vikas',100,10000,4,37);
+insert into employee values(4,'Rohit',100,5000,2,16);
+insert into employee values(5,'Mudit',200,12000,6,55);
+insert into employee values(6,'Agam',200,12000,2,14);
+insert into employee values(7,'Sanjay',200,9000,2,13);
+insert into employee values(8,'Ashish',200,5000,2,12);
+insert into employee values(9,'Mukesh',300,6000,6,51);
+insert into employee values(10,'Rakesh',500,7000,6,50);
+
+
+create table dept(
+    dep_id int,
+    dep_name varchar(20)
+);
+insert into dept values(100,'Analytics');
+insert into dept values(200,'IT');
+insert into dept values(300,'HR');
+insert into dept values(400,'Text Analytics');
+
+select * from employee;
+select * from dept;
+
+
+SELECT d.dep_name, avg(e.salary) avg_salary
+FROM dept d
+LEFT JOIN employee e
+ON d.dep_id = e.dept_id
+GROUP BY d.dep_name;
+
+
+-----4 Q) write a query to print dep names where none of the emplyees have same salary -----
+
+SELECT d.dep_name
+FROM dept d
+INNER JOIN employee e
+ON d.dep_id = e.dept_id
+GROUP BY d.dep_name
+HAVING count(DISTINCT e.salary) = COUNT(e.salary);
+
+
+-----5 Q) write a query to print sub categories where we have all 3 kinds of returns (others,bad quality,wrong items)------
+
+SELECT  o.sub_category
+FROM orders o
+INNER JOIN returns r
+ON o.order_id = r.order_id
+GROUP BY o.sub_category
+HAVING COUNT(DISTINCT return_reason) = 3 ;
+
+-----6 Q) write a query to find cities where not even a single order was returned----
+
+SELECT  o.city
+FROM orders o
+LEFT JOIN returns r
+ON o.order_id = r.order_id
+WHERE r.order_id IS NULL
+GROUP BY o.city;
+
+
+-----7 Q) write a query to find top 3 subcategories by sales of returned orders in east region ------
+
+SELECT TOP 3 o.sub_category, SUM(sales) as sales_return_total
+FROM orders o
+INNER JOIN returns r
+ON o.order_id = r.order_id
+WHERE o.region = 'East'
+GROUP BY o.sub_category;
+
+----8 Q) write a query to print dep name for which there is no employee -----
+
+SELECT d.dep_name
+FROM dept d
+LEFT JOIN employee e
+ON d.dep_id = e.dept_id
+WHERE e.dept_id is NULL;
+
+----9 Q) write a query to print employees name for dep id is not avaiable in dept table-----
+SELECT e.emp_name
+FROM employee e
+LEFT JOIN dept d
+ON d.dep_id = e.dept_id
+WHERE d.dep_id is NULL;	
+
+
+SELECT e.emp_name employee_name	, m.emp_name manager_name
+FROM employee e
+INNER JOIN employee m
+ON e.manager_id = m.emp_id
+WHERE e.salary>m.salary;
+select * from employee;
+
+
+SELECT dept_id, STRING_AGG(emp_name,',') WITHIN GROUP(order by salary)
+FROM employee
+GROUP BY dept_id;
