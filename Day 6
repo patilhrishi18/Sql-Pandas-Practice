@@ -1,0 +1,187 @@
+ ---1 Q write a query to print 3rd highest salaried employee details for each department (give preferece to younger employee in case of a tie).  In case a department has less than 3 employees then print the details of highest salaried employee in that department---
+
+SELECT * FROM employee;
+
+WITH rnk2 AS (
+SELECT *, 
+DENSE_RANK() OVER(partition by dept_id order by salary desc) as rnk
+FROM employee
+),
+cnt AS (
+select dept_id,count(1) as no_of_emp from employee group by dept_id
+)
+SELECT rnk2.*, cnt.* FROM 
+rnk2
+INNER JOIN cnt
+ON rnk2.dept_id = cnt.dept_id
+WHERE rnk = 3 OR (no_of_emp<3 and rnk=1 )
+;
+
+---2 Q) write a query to find top 3 and bottom 3 products by sales in each region ---
+
+SELECT * from orders;
+
+WITH cte as (
+SELECT region, product_id, sum(sales) sales_by_product_region,
+ROW_NUMBER() OVER(partition by region order by sum(sales) DESC) as rank1,
+ROW_NUMBER() OVER(partition by region order by sum(sales) ASC) as rank2
+FROM orders
+GROUP BY region, product_id)
+
+SELECT *
+from
+cte
+WHERE rank1<4 OR rank2<4;
+
+
+with region_sales as (
+select region,product_id,sum(sales) as sales
+from orders
+group by region,product_id
+)
+,rnk as (select *, rank() over(partition by region order by sales desc) as drn
+, rank() over(partition by region order by sales asc) as arn
+from region_sales
+)
+select region,product_id,sales,case when drn <=3 then 'Top 3' else 'Bottom 3' end as top_bottom
+from rnk
+where drn <=3 or arn<=3
+
+
+---3 Q) Among all the sub categories..which sub category had highest month over month growth by sales in Jan 2020.---
+SELECT * FROM orders;
+
+WITH cte as 
+(
+SELECT sub_category, format(order_date,'yyyyMM') as date1 , sum(sales) total_sales
+FROM orders
+GROUP BY sub_category, format(order_date,'yyyyMM') 
+)
+, previous_sales AS
+(
+SELECT cte.*,
+lag(total_sales) OVER(partition by sub_category order by date1) as past_month_Sales
+FROM cte
+)
+
+SELECT TOP 1 * , ((total_sales-past_month_Sales)/past_month_Sales)*100 as Growthmax
+FROM previous_sales
+WHERE date1 = '202001'
+ORDER BY Growthmax desc;
+
+
+
+with sbc_sales as (
+select sub_category,format(order_date,'yyyyMM') as year_month, sum(sales) as sales
+from orders
+group by sub_category,format(order_date,'yyyyMM')
+)
+, prev_month_sales as (select *,lag(sales) over(partition by sub_category order by year_month) as prev_sales
+from sbc_sales)
+select  top 1 * , (sales-prev_sales)/prev_sales as mom_growth
+from prev_month_sales
+where year_month='202001'
+order by mom_growth desc
+
+
+----4 Q) write a query to print top 3 products in each category by year over year sales growth in year 2020----
+
+SELECT * FROM orders;
+
+WITH cte AS (
+    SELECT
+        category,
+        product_id,
+        DATEPART(YEAR, order_date) AS year,
+        SUM(sales) AS cat_prod_sales
+    FROM
+        orders
+    GROUP BY
+        category,
+        product_id,
+        DATEPART(YEAR, order_date)
+)
+,
+pre_year_sales AS (
+    SELECT
+        *,
+        LAG(cat_prod_sales) OVER (PARTITION BY category ORDER BY year) AS pre_year_sales
+    FROM
+        cte
+),
+rnk AS (
+    SELECT
+        *,
+        RANK() OVER (PARTITION BY category ORDER BY (cat_prod_sales - pre_year_sales) / pre_year_sales DESC) AS growth
+    FROM
+        pre_year_sales
+    WHERE
+        year = 2020
+)
+
+SELECT * FROM rnk WHERE growth <= 3;
+
+with cat_sales as (
+select category,product_id,datepart(year,order_date) as order_year, sum(sales) as sales
+from orders
+group by category,product_id,datepart(year,order_date)
+)
+, prev_year_sales as (select *,lag(sales) over(partition by category order by order_year) as prev_year_sales
+from cat_sales)
+,rnk as (
+select   * ,rank() over(partition by category order by (sales-prev_year_sales)/prev_year_sales desc) as rn
+from prev_year_sales
+where order_year='2020'
+)
+select * from rnk where rn<=3;
+
+
+
+
+
+SELECT * from employee;
+
+SELECT *,
+avg(salary) OVER(partition by dept_id) as avg_salary_dep,
+max(salary) OVER(partition by dept_id) as max_salary_dep,
+min(salary) OVER(partition by dept_id) as min_salary_dept,
+sum(salary) OVER(partition by dept_id ORDER BY manager_id) as sum_salary
+FROM employee;
+
+---5 Q) write a query to get start time and end time of each call from above 2 tables.Also create a column of call duration in minutes.  Please do take into account that there will be multiple calls from one phone number and each entry in start table has a corresponding entry in end table---
+
+
+create table call_start_logs
+(
+phone_number varchar(10),
+start_time datetime
+);
+insert into call_start_logs values
+('PN1','2022-01-01 10:20:00'),('PN1','2022-01-01 16:25:00'),('PN2','2022-01-01 12:30:00')
+,('PN3','2022-01-02 10:00:00'),('PN3','2022-01-02 12:30:00'),('PN3','2022-01-03 09:20:00')
+create table call_end_logs
+(
+phone_number varchar(10),
+end_time datetime
+);
+insert into call_end_logs values
+('PN1','2022-01-01 10:45:00'),('PN1','2022-01-01 17:05:00'),('PN2','2022-01-01 12:55:00')
+,('PN3','2022-01-02 10:20:00'),('PN3','2022-01-02 12:50:00'),('PN3','2022-01-03 09:40:00')
+;
+
+
+SELECT * from call_start_logs;
+SELECT * from call_end_logs;
+
+
+SELECT csl.phone_number, csl.start_time, cel.end_time, datediff(MINUTE, start_time,end_time) as Duration 
+FROM
+(SELECT *, 
+ROW_NUMBER() over(partition by phone_number ORDER By start_time) as rnk1
+FROM call_start_logs) csl
+INNER JOIN
+(SELECT *,
+ROW_NUMBER() over(partition by phone_number ORDER BY end_time) as rnk2
+FROM call_end_logs) cel
+ON csl.phone_number = cel.phone_number AND csl.rnk1 = cel.rnk2
+
