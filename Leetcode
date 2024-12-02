@@ -137,3 +137,75 @@ FROM (VALUES
 LEFT JOIN category_cte cc
     ON c.category = cc.category
 GROUP BY c.category;
+
+
+
+## Department Top Three Salaries
+
+/* Write your T-SQL query statement below */
+with joinCTE as
+(
+    SELECT 
+    Dense_Rank() over (PARTITION BY d.name ORDER BY e.salary desc) as Salary_Rank,
+    e.name as Employee, 
+    e.salary as Salary, 
+    d.name as Department
+    FROM Employee e
+    INNER JOIN Department d
+    ON e.departmentId = d.id
+) 
+SELECT 
+       Department,
+       Employee,
+       Salary 
+FROM joinCTE
+WHERE Salary_Rank<4
+Order By Salary
+
+## Employee Bonus
+
+SELECT e.name, b.bonus
+FROM Employee e
+LEFT JOIN Bonus b
+ON e.empID = b.empID
+WHERE b.bonus < 1000 or b.bonus IS NULL
+
+## Last Person to Fit in the Bus
+
+WITH cte as (
+    SELECT *,
+    SUM(weight) OVER (ORDER By turn) as rolling_sum
+    FROM Queue
+)
+SELECT TOP 1 person_name
+FROM cte
+WHERE rolling_sum <= 1000
+ORDER BY rolling_sum DESC
+
+## Confirmation Rate
+
+WITH CTE1 AS(
+     SELECT 
+        S.user_id,
+        SUM(CASE 
+                WHEN C.action = 'timeout' THEN 0 
+                WHEN C.action = 'confirmed' THEN 1
+                ELSE 0
+            END) AS Confirmation,
+        COUNT(*) AS Total
+        FROM 
+            Signups S
+        LEFT JOIN 
+            Confirmations C
+        ON  S.user_id = C.user_id
+        GROUP BY
+            S.user_id   
+)
+SELECT 
+    user_id,
+    ROUND(CAST(Confirmation As Float) / Total,2) as confirmation_rate
+FROM 
+    CTE1
+
+
+
