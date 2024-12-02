@@ -208,4 +208,27 @@ FROM
     CTE1
 
 
+## Consecutive Numbers
+
+WITH Cte1 as (
+        SELECT 
+            num,
+            LEAD(num,1) OVER(ORDER BY id) as lead_by_1,
+            LEAD(num,2) OVER(ORDER BY id) as lead_by_2
+        FROM Logs
+)
+SELECT
+    DISTINCT num as ConsecutiveNums
+FROM Cte1
+WHERE num = lead_by_1 and num = lead_by_2
+
+## Not Boring Movies
+
+SELECT 
+    *
+FROM 
+   Cinema
+WHERE id%2 = 1 and description != 'boring'
+ORDER BY rating DESC
+ 
 
