@@ -230,5 +230,94 @@ FROM
    Cinema
 WHERE id%2 = 1 and description != 'boring'
 ORDER BY rating DESC
- 
 
+## Number of Unique Subjects Taught by Each Teacher
+
+SELECT 
+    teacher_id, 
+    COUNT(DISTINCT subject_id) as cnt
+FROM 
+    Teacher
+Group BY
+    teacher_id
+
+## Average Selling Price
+ 
+WITH CTE1 as (
+        SELECT 
+            P.product_id,
+            P.price,
+            US.units,
+            US.units * P.price as average_price_num
+        FROM 
+            Prices P
+        LEFT JOIN 
+            UnitsSold US
+        On P.product_id = US.product_id
+        AND US.purchase_date BETWEEN P.start_date and P.end_date
+)
+SELECT 
+    product_id,
+    -- ROUND(SUM(CAST(average_price_num as FLOAT)) / SUM(CAST(units as FLOAT)),2 )as average_price
+    COALESCE(ROUND(SUM(CAST(average_price_num AS FLOAT)) / NULLIF(SUM(CAST(units AS FLOAT)), 0), 2), 0) AS average_price
+FROM 
+    CTE1
+GROUP BY
+    product_id
+
+
+## Projects Employee 1
+
+/* Write your T-SQL query statement below */
+SELECT 
+    project_id,
+    ROUND(AVG(CAST(E.experience_years as decimal)),2) as average_years
+FROM 
+    Project P
+INNER JOIN 
+    Employee E
+ON  p.employee_id = e.employee_id
+GROUP BY
+    project_id
+
+## Queries Quality and Percentage
+
+SELECT
+    query_name,
+    ROUND(SUM(CAST(rating AS DECIMAL) / CAST(position AS DECIMAL)) / COUNT(*), 2) AS quality,
+    ROUND((SUM(
+        CASE 
+            WHEN CAST(rating AS DECIMAL) < 3.0 THEN 1 
+            ELSE 0
+        END
+    ) * 1.0 / COUNT(*)) * 100, 2) AS poor_query_percentage
+FROM 
+    Queries
+WHERE 
+    query_name <> 'null'
+GROUP BY 
+    query_name;
+
+
+## Students with more than 5 employees 
+
+SELECT 
+    class
+FROM 
+    Courses 
+GROUP BY 
+    class
+HAVING 
+    COUNT(*) >= 5
+
+
+## Find Follower Count
+
+
+SELECT
+    user_id, 
+    COUNT(follower_id) as followers_count 
+FROM 
+    Followers 
+GROUP BY 
+    user_id
