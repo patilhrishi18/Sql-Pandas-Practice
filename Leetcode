@@ -321,3 +321,20 @@ FROM
     Followers 
 GROUP BY 
     user_id
+
+
+## Biggest single Number
+
+/* Write your T-SQL query statement below */
+SELECT COALESCE(
+(
+    SELECT 
+    TOP 1 num
+    FROM 
+        MyNumbers
+    GROUP BY 
+        num
+    HAVING 
+        COUNT(*) = 1
+    ORDER BY num desc
+), null) as num;
